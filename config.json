@@ -1,9 +1,5 @@
 {
-  "device_provisioning": {
-    "sigfox": {
-      "network_server": "",
-      "user": "",
-      "password": ""
-    }
+  "sigfox": {
+    "network_server": ""
   }
 }
