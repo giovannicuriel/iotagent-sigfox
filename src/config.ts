@@ -1,14 +1,7 @@
+export var sigfox = {
+  network_server: process.env.SIGFOX_BACKEND_SERVER || "localhost:8008"
+};
 
-// Sigfox Network Server Options
-interface Sigfox {
-  // the http server
-  network_server: string;
+export var cache = {
+  redis: process.env.IOTAGENT_SIGFOX_CACHE_HOST || "iotagent-sigfox-redis"
 }
-
-// Main configuration structure
-interface ConfigOptions {
-  // Device Provisioning options
-  sigfox: Sigfox;
-}
-
-export { ConfigOptions };

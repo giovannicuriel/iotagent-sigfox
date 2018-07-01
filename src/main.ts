@@ -1,7 +1,6 @@
 import fs = require("fs");
 import util = require("util");
-import {Agent} from "./agent";
-import { ConfigOptions } from "./config";
+import { Agent } from "./agent";
 
 function main() {
   // Simple sanity check. Configuration file must be present.
@@ -15,9 +14,7 @@ function main() {
     if (err) {
       return console.error(err);
     }
-    let configuration: ConfigOptions = JSON.parse(data.toString());
-    console.log("Detected configuration: " + util.inspect(configuration, {depth: null}));
-    let agent = new Agent(configuration);
+    let agent = new Agent();
     agent.start();
   });
 }

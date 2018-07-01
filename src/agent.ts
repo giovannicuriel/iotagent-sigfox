@@ -2,18 +2,18 @@ import util = require("util");
 import iotagent = require('dojot-iotagent');
 import express = require('express');
 import bodyParser = require('body-parser');
-import axios, { AxiosResponse, AxiosError } from "axios";
+import axios, { AxiosResponse, AxiosError, AxiosRequestConfig } from "axios";
 import * as Sigfox from "./SigfoxRequests";
-import { ConfigOptions } from "./config";
 import { CacheHandler } from "./cache";
 import { DojotDeviceTemplate } from './DojotDeviceTemplate';
+import * as config from "./config";
+import { RedisManager } from "./redisManager";
+import { authParse, AuthRequest } from './api/authMiddleware';
 
 /**
  * Sigfox IoT Agent Class
  */
 class Agent {
-  // Main configuration structure.
-  configuration: ConfigOptions;
 
   // IoTAgent lib
   iota: iotagent.IoTAgent;
@@ -24,16 +24,20 @@ class Agent {
   // Simpe cache
   cache: CacheHandler;
 
-  constructor(config: ConfigOptions) {
+  getSetScript: string;
+
+  constructor() {
     if (config.sigfox === undefined) {
       throw new Error('Missing Sigfox configuration options');
     }
-    this.configuration = config;
     this.cache = new CacheHandler();
     this.app = express();
     this.app.use(bodyParser.json());
+    this.app.use(authParse as any);
     this.iota = new iotagent.IoTAgent();
     this.iota.init();
+
+    this.getSetScript = __dirname + "/lua/getSet.lua";
   }
 
   /**
@@ -118,7 +122,9 @@ class Agent {
     this.iota.on('device.update', (event: any) => { this.on_update_device(event) });
     this.iota.on('device.remove', (event: any) => { this.on_delete_device(event) });
 
-    this.app.post('/Sigfox', (req: any, res: any) => { this.handle_data(req, res) });
+    this.app.post('/sigfox', (req: any, res: any) => { this.handle_data(req, res) });
+
+    this.app.post('/sigfox_user', (req: any, res: any) => { this.handle_user(req, res) });
 
     this.app.listen(18000, () => { console.log('--- Sigfox IoTAgent running (port 80) ---') });
   }
@@ -145,11 +151,52 @@ class Agent {
     return res.status(200).send();
   }
 
+  handle_user(req: AuthRequest, res: express.Response) {
+    let redis = RedisManager.getClient('');
+    // Retrieve service
+    let service = req.service;
+    let username = req.body.username;
+    let passwd = req.body.passwd;
+    let key = service + "-" + username;
 
-  sendSigfoxRequest(url: string, body: any) {
+    redis.runScript(this.getSetScript, [key], [passwd], (err: any, passwd: string) => {
+      if (err) {
+        res.status(500).send("Could not add user to registry");
+      } else {
+        res.status(200).send("User successfully added to registry");
+      };
+      return;
+    });
+  }
+
+  retrieveSigfoxUserPasswd(service: string, username: string): Promise<string> {
+    return new Promise((accept, reject) => {
+      let redis = RedisManager.getClient('');
+      // Retrieve service
+      let key = service + "-" + username;
+
+      redis.runScript(this.getSetScript, [key], [], (err: any, passwd: string) => {
+        if (err) {
+          reject("Error while retrieving password.");
+        } else {
+          accept(passwd);
+        };
+        return;
+      });
+    });
+  }
+
+  sendSigfoxRequest(url: string, body: any, username: string, password: string) {
     console.log("Sending Sigfox request...");
     console.log(`Sending to ${url}`);
-    axios.post(url, body).then((response: AxiosResponse) => {
+    let config: AxiosRequestConfig = {
+      auth: {
+        username,
+        password
+      }
+    }
+
+    axios.post(url, body, config).then((response: AxiosResponse) => {
       console.log("... request successfully processed.");
       console.log(`Received result is: ${response.data}`);
     }).catch((error: AxiosError) => {
@@ -159,19 +206,29 @@ class Agent {
     console.log("... Sigfox request was sent.");
   }
 
-  processDeviceRegistration(deviceTypeId: string, SigfoxDeviceData: Sigfox.IDeviceRegistration) {
-    console.log("Registering device...");
-    let url = `${this.configuration.sigfox.network_server}/api/devicetypes/${deviceTypeId}/devices/bulk/create/async`;
-    this.sendSigfoxRequest(url, SigfoxDeviceData);
-    console.log("... device registration was requested.");
+  processDeviceRegistration(service: string, username: string, deviceTypeId: string, sigfoxDeviceData: Sigfox.IDeviceRegistration) {
+    this.retrieveSigfoxUserPasswd(service, username).then((passwd: string) => {
+      console.log("Registering device...");
+      let url = `${config.sigfox.network_server}/api/devicetypes/${deviceTypeId}/devices/bulk/create/async`;
+      this.sendSigfoxRequest(url, sigfoxDeviceData, username, passwd);
+      console.log("... device registration was requested.");
+    }).catch((error: string) => {
+      console.log("... device registration failed.");
+      console.log(`Error is: ${error}`);
+    });
   }
 
 
-  processDeviceEdition(deviceEditionReq: Sigfox.IDeviceEdition) {
-    console.log("Editing device...");
-    let url = `${this.configuration.sigfox.network_server}/api/devices/bulk/edit`
-    this.sendSigfoxRequest(url, deviceEditionReq);
-    console.log("... device registration was requested.");
+  processDeviceEdition(service: string, username: string, deviceEditionReq: Sigfox.IDeviceEdition) {
+    this.retrieveSigfoxUserPasswd(service, username).then((passwd: string) => {
+      console.log("Editing device...");
+      let url = `${config.sigfox.network_server}/api/devices/bulk/edit`;
+      this.sendSigfoxRequest(url, deviceEditionReq, username, passwd);
+      console.log("... device registration was requested.");
+    }).catch((error: string) => {
+      console.log("... device edition failed.");
+      console.log(`Error is: ${error}`);
+    });
   }
 
 
@@ -200,7 +257,7 @@ class Agent {
 
     console.log("... Sigfox request was built.");
     console.log("Registering new device in Sigfox backend...");
-    this.processDeviceRegistration(sigfoxTypeId, sigfoxRequestData);
+    this.processDeviceRegistration(event.meta.service, dojotTemplateData.sigfox_user, sigfoxTypeId, sigfoxRequestData);
     console.log("... device registration request was sent.");
   }
 
@@ -227,7 +284,7 @@ class Agent {
 
     console.log("... Sigfox request was built.");
     console.log("Editing device in Sigfox backend...");
-    this.processDeviceEdition(sigfoxRequestData);
+    this.processDeviceEdition(event.meta.service, dojotTemplateData.sigfox_user, sigfoxRequestData);
     console.log("... device edition request was sent.");
   }
 

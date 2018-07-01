@@ -23,9 +23,11 @@
   },
   "dependencies": {
     "@types/axios": "^0.14.0",
+    "@types/redis": "^2.8.6",
     "axios": "^0.18.0",
     "dojot-iotagent": "https://github.com/dojot/iotagent-nodejs",
     "express": "^4.16.2",
+    "redis": "^2.8.0",
     "tsconfig": "^7.0.0",
     "typescript": "^2.5.3"
   }
