@@ -4,7 +4,7 @@
   "description": "IOTA for Sigfox network",
   "scripts": {
     "start": "node build/main.js",
-    "build": "tsc",
+    "build": "tsc && cp src/lua ./build -R",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
