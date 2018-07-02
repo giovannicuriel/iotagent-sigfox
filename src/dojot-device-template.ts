@@ -1,6 +1,6 @@
 "use strict";
 
-import * as sigfox from "./SigfoxRequests";
+import * as sigfox from "./sigfox-requests";
 
 export class DojotDeviceTemplate {
   public device: string;

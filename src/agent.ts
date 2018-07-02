@@ -3,11 +3,11 @@ import iotagent = require('dojot-iotagent');
 import express = require('express');
 import bodyParser = require('body-parser');
 import axios, { AxiosResponse, AxiosError, AxiosRequestConfig } from "axios";
-import * as Sigfox from "./SigfoxRequests";
+import * as Sigfox from "./sigfox-requests";
 import { CacheHandler } from "./cache";
-import { DojotDeviceTemplate } from './DojotDeviceTemplate';
+import { DojotDeviceTemplate } from './dojot-device-template';
 import * as config from "./config";
-import { RedisManager } from "./redisManager";
+import { RedisManager } from "./redis-manager";
 import { authParse, AuthRequest } from './api/authMiddleware';
 
 /**
