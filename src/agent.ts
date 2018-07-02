@@ -24,7 +24,7 @@ class Agent {
   // Simpe cache
   cache: CacheHandler;
 
-  getSetScript: string;
+  setGetScript: string;
 
   constructor() {
     if (config.sigfox === undefined) {
@@ -37,7 +37,7 @@ class Agent {
     this.iota = new iotagent.IoTAgent();
     this.iota.init();
 
-    this.getSetScript = __dirname + "/lua/getSet.lua";
+    this.setGetScript = __dirname + "/lua/setGet.lua";
   }
 
   /**
@@ -159,7 +159,7 @@ class Agent {
     let passwd = req.body.passwd;
     let key = service + "-" + username;
 
-    redis.runScript(this.getSetScript, [key], [passwd], (err: any, passwd: string) => {
+    redis.runScript(this.setGetScript, [key], [passwd], (err: any, passwd: string) => {
       if (err) {
         res.status(500).send("Could not add user to registry");
       } else {
@@ -175,7 +175,7 @@ class Agent {
       // Retrieve service
       let key = service + "-" + username;
 
-      redis.runScript(this.getSetScript, [key], [], (err: any, passwd: string) => {
+      redis.runScript(this.setGetScript, [key], [], (err: any, passwd: string) => {
         if (err) {
           reject("Error while retrieving password.");
         } else {
