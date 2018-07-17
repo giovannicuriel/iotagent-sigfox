@@ -126,7 +126,8 @@ class Agent {
 
     this.app.post('/sigfox_user', (req: any, res: any) => { this.handle_user(req, res) });
 
-    this.app.listen(18000, () => { console.log('--- Sigfox IoTAgent running (port 80) ---') });
+    console.log(`Starting IoT agent at port ${config.agent.port}...`);
+    this.app.listen(config.agent.port, () => { console.log(`--- Sigfox IoTAgent running (port ${config.agent.port}) ---`) });
   }
 
   handle_data(req: any, res: any) {

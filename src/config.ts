@@ -5,3 +5,7 @@ export var sigfox = {
 export var cache = {
   redis: process.env.IOTAGENT_SIGFOX_CACHE_HOST || "iotagent-sigfox-redis"
 }
+
+export var agent ={
+  port: Number(process.env.IOTAGENT_SIGFOX_PORT) || 80
+}
