@@ -16,6 +16,7 @@ associated device.
    :glob:
 
    operation
+   deployment
    building-documentation
 
 
