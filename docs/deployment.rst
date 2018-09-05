@@ -55,7 +55,7 @@ iotagent-sigfox. You can add the following lines to the end of this script:
       -d @- ) <<PAYLOAD
   {
       "name": "iotagent-sigfox",
-      "uris": "/sigfox",
+      "uris": ["/sigfox", "/sigfox_user"],
       "strip_uri": false,
       "upstream_url": "http://iotagent-sigfox:80"
   }
@@ -75,9 +75,11 @@ At last, the IoT agent can be started:
     docker-compose up -d iotagent-sigfox
 
 
-To use this IoT agent, you must add a Sigfox template - as described in Operations
-documentation - and add a few Sigfox devices. To test whether everything is 
-working, you could send some dummy messages, like these:
+To use this IoT agent, you must add Sigfox user, used to register new devices
+in sigfox backend servers and, sigfox template using this user and add a few
+Sigfox devices. There a sample template to be used in `Operation` section and a
+simple exemple of how to add users. To test whether everything is working, you
+could send some dummy messages, like these:
 
 .. code-block:: bash
 
