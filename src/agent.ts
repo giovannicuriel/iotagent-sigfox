@@ -108,7 +108,7 @@ class Agent {
                 if (SigfoxData !== null) {
                   let [Sigfox_id] = SigfoxData;
                   if (Sigfox_id !== '') {
-                    this.cache.correlate_dojot_and_sigfox_device_id(device_id, Sigfox_id);
+                    this.cache.correlate_dojot_and_sigfox_device_id(device_id, device_info.templates, Sigfox_id);
                   }
                 }
               })
@@ -134,17 +134,26 @@ class Agent {
     console.log('will update', req.body);
 
     // get device from cache
-    let dojot_device_id = this.cache.get_dojot_device_id(req.body.device);
+    let dojot_device = this.cache.get_dojot_device_id(req.body.device);
 
-    console.log("Retrieving dojot device id [%s] <-> [%s] from Sigfox id", dojot_device_id, req.body.device);
+    if (dojot_device == undefined) {
+      console.log(`Device not yet registered: ${req.body.device}. Ignoring it.`);
+      return res.status(404).send("device not yet registered.");
+    }
+
+    console.log("Retrieving dojot device id [%s] <-> [%s] from Sigfox id", dojot_device.deviceId, req.body.device);
 
     req.body.timestamp = new Date(req.body.timestamp * 1000).toISOString();
     req.body.station_coordinates = req.body.station_lat.toString() + "," + req.body.station_lng.toString();
 
+    let metadata = {
+      "templates": dojot_device.templates,
+    }
+
     this.iota.listTenants()
       .then((tenants: any) => {
         for (let t of tenants) {
-          this.iota.updateAttrs(dojot_device_id, t, req.body, {});
+          this.iota.updateAttrs(dojot_device.deviceId, t, req.body, metadata);
         }
       })
       .catch((error: any) => { console.error(error) });
@@ -244,7 +253,7 @@ class Agent {
     let [sigfoxId, sigfoxTemplate] = sigfoxData;
 
     if (sigfoxId !== '') {
-      this.cache.correlate_dojot_and_sigfox_device_id(event.data.id, sigfoxId);
+      this.cache.correlate_dojot_and_sigfox_device_id(event.data.id, event.data.templates, sigfoxId);
     }
 
     console.log("Registering device in Sigfox backend...");
@@ -273,7 +282,7 @@ class Agent {
 
     let [sigfoxId, sigfoxTemplate] = sigfoxData;
     if (sigfoxId !== '') {
-      this.cache.correlate_dojot_and_sigfox_device_id(event.data.id, sigfoxId);
+      this.cache.correlate_dojot_and_sigfox_device_id(event.data.id, event.data.templates, sigfoxId);
     }
     console.log("Editing device in Sigfox backend...");
     console.log("Building Sigfox request from device data...");
