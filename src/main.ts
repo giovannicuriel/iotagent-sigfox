@@ -1,4 +1,3 @@
-import fs = require("fs");
 import { Agent } from "./agent";
 
 function main() {
